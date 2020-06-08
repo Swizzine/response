@@ -1,0 +1,26 @@
+- id: d9bdc164-4d47-4454-aa15-17545929919a
+  description: Enable script block logging to be able to read base64 encoded commands running on endpoint.
+  name: Script Block Logging
+  tactic: response
+  technique:
+    attack_id: T1086
+    name: PowerShell
+  platforms:
+    windows:
+      psh:
+        command: |
+          $server="#{app.contact.http}";
+          $url="$server/file/download";
+          $wc=New-Object System.Net.WebClient;
+          $wc.Headers.add("platform","windows");
+          $wc.Headers.add("file","script-block-logging.ps1")
+          $data=$wc.DownloadData($url);
+          $name=$wc.ResponseHeaders["Content-Disposition"].Substring($wc.ResponseHeaders["Content-Disposition"].IndexOf("filename=")+9).Replace("`"","");
+          get-process | ? {$_.modules.filename -like "C:\Users\Public\$name.exe"}
+          | stop-process -f;
+          rm -force "C:\Users\Public\$name.exe" -ea ignore;
+          [io.file]::WriteAllBytes("C:\Users\Public\$name.exe",$data) | Out-Null;
+          Start-Process -FilePath C:\Users\Public\$name.exe -ArgumentList "-server
+          $server -group blue" -WindowStyle hidden;'
+        payloads:
+        - script-block-logging.ps1
